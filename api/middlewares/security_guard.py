@@ -78,6 +78,7 @@ def add_guard_middleware(app) -> None:
     # but does not check the peer. The server entry points pass uvicorn_proxy_kwargs()
     # so that Uvicorn does not rewrite the peer from other proxies first.
     trusted_proxies = tuple(_trusted_proxies()) if _trust_xff() else ()
+    allowlist = tuple(_csv("GUARD_WHITELIST"))
 
     config = SecurityConfig(
         enable_redis=False,  # in-memory state, per process; no Redis required
@@ -87,7 +88,10 @@ def add_guard_middleware(app) -> None:
         trusted_proxy_depth=1,
         rate_limit=_int("GUARD_RATE_LIMIT", 300),
         rate_limit_window=_int("GUARD_RATE_LIMIT_WINDOW", 60),
-        whitelist=tuple(_csv("GUARD_WHITELIST")) or None,
+        whitelist=allowlist or None,
+        # exempt_ips is guard-core's explicit rate-limit skip list; listing the allowlist
+        # there keeps the documented exemption without relying on whitelist side effects.
+        exempt_ips=allowlist,
         blacklist=tuple(_csv("GUARD_BLACKLIST")),
         detection_scan_body=os.getenv("GUARD_SCAN_BODY", "false").strip().lower() in _TRUE,
         passive_mode=os.getenv("GUARD_PASSIVE_MODE", "false").strip().lower() in _TRUE,

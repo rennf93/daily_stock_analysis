@@ -126,6 +126,8 @@ class SecurityGuardTestCase(unittest.TestCase):
         client = self._client(app)
 
         self.assertEqual([client.get("/api/v1/auth/status").status_code for _ in range(5)], [200] * 5)
+        guard = next(m for m in app.user_middleware if m.cls is self._guard_cls())
+        self.assertEqual(guard.kwargs["config"].exempt_ips, (self.peer,))
 
     def test_spoofed_xff_is_ignored_from_untrusted_peer(self):
         app = self._build_app(
